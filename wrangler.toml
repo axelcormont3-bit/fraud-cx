@@ -1,0 +1,36 @@
+name = "straitly-gateway"
+main = "src/index.js"
+compatibility_date = "2024-11-01"
+compatibility_flags = []
+
+# KV namespaces (run `wrangler kv:namespace create GATEWAY_KV` to get the IDs,
+# then paste them below before deploying)
+[[kv_namespaces]]
+binding = "GATEWAY_KV"
+id = "REPLACE_WITH_KV_NAMESPACE_ID"
+preview_id = "REPLACE_WITH_KV_PREVIEW_NAMESPACE_ID"
+
+# Secrets (set via `wrangler secret put <NAME>` or GitHub Actions – never put
+# real values here)
+# GATEWAY_SECRET      – the single API key clients send to this gateway
+# ADMIN_SECRET        – the separate admin dashboard password
+# STRAITLY_KEYS_JSON  – JSON array of Straitly key strings (bootstrap only;
+#                       keys are managed in KV after first deploy)
+#
+# KV write budget notes:
+#   Normal requests cost 0 KV writes (rotation and stats are in-memory).
+#   Stats flush to KV every 60 minutes via waitUntil (non-blocking).
+#     Worst case (20 active keys): 21 writes/flush × 24 flushes/day = 504 writes/day.
+#   Key failures (quarantine/disable) cost 1 KV write each.
+#   Total typical daily writes: well under the Free plan 1,000 write/day limit.
+#   The effective request ceiling on the Free plan is 100k Worker requests/day.
+
+[vars]
+UPSTREAM_BASE_URL = "https://api.straitly.ai/v1"
+MAX_RETRIES = "5"
+REQUEST_TIMEOUT_MS = "120000"
+RATE_LIMIT_WINDOW_MS = "60000"
+RATE_LIMIT_MAX_REQUESTS = "200"
+
+# Uncomment to restrict CORS to your own frontend origin.
+# ALLOWED_ORIGIN = "https://your-app.example.com"
