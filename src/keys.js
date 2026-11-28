@@ -203,9 +203,18 @@ export async function markKeyBad(kv, id) {
 /**
  * Returns an ordered list of key objects to try for this request.
  *
- * Uses the in-memory rrCounter — zero KV reads or writes on the hot path.
- * The list starts at the current counter position and wraps around, so each
- * successive call shifts the starting key by one (within the same isolate).
+ * Strategy: Least-Recently-Used (LRU)
+ *
+ * Always starts with the key that was used longest ago, so all accounts
+ * drain evenly and every key stays warm.  This maximises combined rate-limit
+ * headroom: with 11 accounts at 300 req/min each you get ~3,300 req/min total
+ * instead of hammering one account while others sit idle.
+ *
+ * lastUsed timestamps live in memStats (in-memory, updated on every request).
+ * On a cold start all timestamps are 0 so the order falls back to the KV list
+ * order, which is fine — they'll spread out within the first few requests.
+ *
+ * Zero KV reads or writes on the hot path beyond the mandatory keys:list read.
  */
 export async function getOrderedKeys(kv) {
   const keys = await listKeys(kv);  // 1 KV read (always needed)
@@ -215,13 +224,15 @@ export async function getOrderedKeys(kv) {
   const available = keys.filter(k => k.enabled && k.quarantineUntil < now);
   if (available.length === 0) return [];
 
-  const start = rrCounter % available.length;
-  rrCounter = (rrCounter + 1) % available.length;  // pure memory, no KV write
+  // Sort by lastUsed ascending — least recently used comes first.
+  // Ties broken by position in the KV list (stable, deterministic).
+  available.sort((a, b) => {
+    const usedA = memStats.get(a.id)?.lastUsed ?? 0;
+    const usedB = memStats.get(b.id)?.lastUsed ?? 0;
+    return usedA - usedB;
+  });
 
-  return [
-    ...available.slice(start),
-    ...available.slice(0, start),
-  ];
+  return available;
 }
 
 // ─── in-memory stats accumulation ───────────────────────────────────────────

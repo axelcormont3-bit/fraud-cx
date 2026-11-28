@@ -160,13 +160,18 @@ describe('getOrderedKeys', () => {
     assert.ok(keys.every(k => k.enabled));
   });
 
-  it('rotates starting key across calls (in-memory counter)', async () => {
+  it('rotates starting key across calls (LRU order)', async () => {
     const kv = makeKV();
     for (let i = 0; i < 4; i++) await addKey(kv, `sk-rotate-key-${i}`, `Key ${i}`);
 
-    const first  = await getOrderedKeys(kv);
+    // First call: all lastUsed = 0, returns in list order
+    const first = await getOrderedKeys(kv);
+    // Simulate key 0 being used
+    incrementStats(first[0].id);
+
+    // Second call: key 0 now has lastUsed > 0, so it moves to the back
     const second = await getOrderedKeys(kv);
-    assert.notEqual(first[0].id, second[0].id);
+    assert.notEqual(first[0].id, second[0].id, 'LRU should not reuse most-recently-used key first');
   });
 
   it('skips quarantined keys', async () => {
@@ -740,7 +745,7 @@ describe('concurrent requests', () => {
     }
   });
 
-  it('round-robin distributes keys across sequential requests', async () => {
+  it('LRU distributes keys evenly across sequential requests', async () => {
     const env = makeEnv();
     for (let i = 0; i < 4; i++) {
       await addKey(env.GATEWAY_KV, `sk-rr-seq-${i}`, `RR Key ${i}`);
