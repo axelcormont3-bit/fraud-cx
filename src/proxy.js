@@ -53,7 +53,10 @@ const STRIP_RESPONSE_HEADERS = new Set([
 export async function proxyRequest(request, env, ctx) {
   const url = new URL(request.url);
   const upstreamBase = (env.UPSTREAM_BASE_URL || 'https://api.straitly.ai/v1').replace(/\/$/, '');
-  const upstreamUrl  = upstreamBase + url.pathname + url.search;
+  // Strip the /v1 prefix from the incoming path before appending to the upstream
+  // base (which already ends in /v1), otherwise we'd build …/v1/v1/models.
+  const upstreamPath = url.pathname.replace(/^\/v1/, '');
+  const upstreamUrl  = upstreamBase + upstreamPath + url.search;
 
   const maxRetries = Math.min(parseInt(env.MAX_RETRIES || '5', 10), 20);
   const timeoutMs  = Math.min(parseInt(env.REQUEST_TIMEOUT_MS || '120000', 10), 300_000);
