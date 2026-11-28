@@ -1,4 +1,4 @@
-name = "straitly-gateway"
+name = "fraud-cx"
 main = "src/index.js"
 compatibility_date = "2024-11-01"
 compatibility_flags = []
@@ -7,8 +7,8 @@ compatibility_flags = []
 # then paste them below before deploying)
 [[kv_namespaces]]
 binding = "GATEWAY_KV"
-id = "REPLACE_WITH_KV_NAMESPACE_ID"
-preview_id = "REPLACE_WITH_KV_PREVIEW_NAMESPACE_ID"
+id = "dec9bb28829948b9b26ebbd6bc80282f"
+preview_id = "f6e730a37f0b4e6f815b1cb490c6c2ac"
 
 # Secrets (set via `wrangler secret put <NAME>` or GitHub Actions – never put
 # real values here)
